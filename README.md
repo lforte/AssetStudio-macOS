@@ -79,6 +79,17 @@ To build this from source on macOS you'll need:
    ```
    or open the solution in an IDE that supports .NET MAUI (Visual Studio 2022+, VS Code with the MAUI extension, JetBrains Rider) and run the `AssetStudio.Maui` target.
 
+## Releases
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) builds the app and publishes it as a GitHub Release automatically whenever a `v*` tag is pushed:
+
+```
+git tag -a v1.0.1 -m "v1.0.1"
+git push origin v1.0.1
+```
+
+It can also be run on demand from the Actions tab (`workflow_dispatch`) without creating a release, to sanity-check that the build still works. Note that CI-built releases don't include FBX export, since the proprietary FBX SDK isn't available on GitHub-hosted runners — see the comments at the top of that workflow file for details.
+
 ## Usage
 
 - **Open File(s)** loads one or more Unity asset/AssetBundle files. The status bar shows how many assets were found.

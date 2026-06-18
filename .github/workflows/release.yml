@@ -1,0 +1,95 @@
+name: Release macOS App
+
+# Builds AssetStudio.Maui and publishes it as a GitHub Release.
+#
+# Trigger a release by pushing a tag:
+#   git tag -a v1.0.1 -m "v1.0.1"
+#   git push origin v1.0.1
+#
+# Or run it manually from the Actions tab (workflow_dispatch) without creating a
+# release - useful to sanity-check that the build still works.
+#
+# Known limitation: AssetStudioFBXNative needs the proprietary Autodesk FBX SDK,
+# which can't be downloaded automatically here (requires a licensed Autodesk
+# account). Released builds from this workflow therefore do NOT include FBX
+# export - only Texture2DDecoderNative is built in CI. If you need FBX export,
+# either build locally with the SDK installed (see README "Building"), or run
+# this workflow on a self-hosted runner that already has the SDK at the path
+# AssetStudioFBXNative/CMakeLists.txt expects, after adding a build step for it.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest available Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install CMake
+        run: brew install cmake
+
+      - name: Build Texture2DDecoderNative (universal binary)
+        run: |
+          cmake -B Texture2DDecoderNative/build -S Texture2DDecoderNative \
+                -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          cmake --build Texture2DDecoderNative/build --config Release
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+
+      - name: Build AssetStudio.Maui (Release)
+        run: dotnet build AssetStudio.Maui/AssetStudio.Maui.csproj -c Release -f net10.0-maccatalyst
+
+      - name: Package app bundle
+        run: |
+          APP_PATH=$(find AssetStudio.Maui/bin/Release/net10.0-maccatalyst -maxdepth 2 -name "*.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Could not find a built .app bundle" >&2
+            exit 1
+          fi
+          ZIP_NAME="AssetStudio.Maui-${{ github.ref_name }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_NAME"
+          echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssetStudio.Maui-macOS
+          path: ${{ env.ZIP_NAME }}
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            **Note:** this CI build does not include FBX export - the Autodesk FBX SDK is
+            proprietary and can't be fetched automatically in CI. Build locally with the
+            SDK installed (see the README's "Building" section) if you need FBX export.
+
+            The app is not code-signed with a Developer ID or notarized, so macOS
+            Gatekeeper will block it on first launch: right-click the app -> **Open**,
+            or run `xattr -cr AssetStudio.Maui.app` before launching.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
