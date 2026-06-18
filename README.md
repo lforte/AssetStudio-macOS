@@ -114,6 +114,28 @@ While building this port and testing against real-world AssetBundles, two parsin
 - **`Texture2D` (Unity 2022.2+):** a missing `m_MipmapLimitGroupName` field read caused all subsequent texture data to be misaligned, corrupting decoded textures.
 - **`Shader`/`SerializedProgram` (Unity 2022.1+):** two missing fields (`m_PlayerSubPrograms`, `m_ParameterBlobIndices`, added by Unity's player-data-separation feature) caused shader parsing to read garbage data, manifesting as 20-60 second parse times per shader object.
 
+## Roadmap
+
+Planned/possible improvements for future versions, roughly in priority order:
+
+**Build & distribution**
+- Upgrade to Xcode 26.4 so Release-configuration builds work (the MAUI linker currently requires it; v1.0.0 ships as a Debug build as a workaround — see [Releases](#releases)).
+- Code-sign with a Developer ID and notarize releases, so macOS Gatekeeper doesn't block first launch.
+- Build `AssetStudioFBXNative` on a self-hosted CI runner with the FBX SDK installed, so automated releases include FBX export (currently only local builds do — see [`release.yml`](.github/workflows/release.yml)).
+
+**Feature parity with the original Windows GUI**
+- A Scene Hierarchy / GameObject tree view (the Mac app currently only has the flat asset list).
+- An assembly-directory picker for MonoBehaviour export, including the Il2CppDumper dummy-DLL workflow.
+- An export-options panel (scale factor, FBX version, eulerFilter, etc.) — currently uses `ExportSettings` defaults with no UI to change them.
+
+**Polish**
+- Remove the on-screen debug overlay in the 3D viewer (`#debug` div in `MeshViewerHtml.cs`) — it's diagnostic leftover from chasing a WebView data-transfer bug, not meant for end users.
+- Wire up a wireframe-toggle button in the UI (the `setWireframe()` JS function already exists, just unused).
+- Revisit 3D viewer performance for very large meshes — it currently rebuilds and reloads the whole WebView page per selection.
+
+**Robustness**
+- Audit other asset classes for the same kind of version-specific missing-field bugs found in `Texture2D` and `Shader` (see [Notable fixes](#notable-fixes-upstreamed-from-this-port)), especially for Unity versions newer than 2022.1 (the original project's documented support ceiling).
+
 ## Acknowledgments
 
 - [Perfare/AssetStudio](https://github.com/Perfare/AssetStudio) — the original project this is ported from. This fork would not exist without it.
