@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AssetStudio.Maui.MainPage"
+             Title="AssetStudio"
+             BackgroundColor="White">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <HorizontalStackLayout Grid.Row="0" Padding="10" Spacing="10">
+            <Button x:Name="OpenFilesButton" Text="Open File(s)" Clicked="OnOpenFilesClicked" />
+            <Button x:Name="ExportSelectedButton" Text="Export Selected" Clicked="OnExportSelectedClicked" IsEnabled="False" />
+            <Button x:Name="ExportAllButton" Text="Export All" Clicked="OnExportAllClicked" IsEnabled="False" />
+            <SearchBar x:Name="AssetSearchBar" Placeholder="Filter assets..." TextColor="LightGray" TextChanged="OnSearchTextChanged" WidthRequest="250" />
+        </HorizontalStackLayout>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="ListColumn" Width="350" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" RowDefinitions="Auto,*">
+
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="10,6" BackgroundColor="#EEEEEE">
+                    <Label x:Name="NameHeaderLabel" Grid.Column="0" Text="Name" FontAttributes="Bold" TextColor="Black">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnNameHeaderTapped" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <Label x:Name="TypeHeaderLabel" Grid.Column="1" Text="Type" FontAttributes="Bold" FontSize="12" TextColor="Black" VerticalOptions="Center">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnTypeHeaderTapped" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </Grid>
+
+                <CollectionView x:Name="AssetListView" Grid.Row="1" SelectionMode="Single" SelectionChanged="OnAssetSelected">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="10,6" ColumnDefinitions="*,Auto">
+                                <Label Text="{Binding Text}" TextColor="Black" LineBreakMode="TailTruncation" />
+                                <Label Grid.Column="1" Text="{Binding TypeString}" TextColor="Gray" FontSize="12" VerticalOptions="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+            </Grid>
+
+            <!-- Drag handle to resize the asset list panel -->
+            <BoxView Grid.Column="1" Color="LightGray" WidthRequest="1" HorizontalOptions="Center" VerticalOptions="Fill" InputTransparent="False" />
+            <BoxView Grid.Column="1" Color="Transparent" InputTransparent="False">
+                <BoxView.GestureRecognizers>
+                    <PanGestureRecognizer PanUpdated="OnSplitterPanUpdated" />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+
+            <Grid Grid.Column="2">
+                <ScrollView x:Name="ImagePreviewScroll" Padding="10">
+                    <Grid x:Name="ImagePreviewContainer">
+                        <Image x:Name="PreviewImage" Aspect="AspectFit" IsVisible="False" />
+                    </Grid>
+                </ScrollView>
+
+                <Editor x:Name="PreviewText" TextColor="Black" IsVisible="False" IsReadOnly="True" FontFamily="Courier" />
+
+                <WebView x:Name="MeshPreviewWebView" IsVisible="False" />
+
+                <Button x:Name="ShaderPreviewToggleButton" Text="Show 3D Preview" HorizontalOptions="End" VerticalOptions="Start" Margin="16" IsVisible="False" Clicked="OnShaderPreviewToggleClicked" />
+
+                <HorizontalStackLayout x:Name="ZoomControls" HorizontalOptions="End" VerticalOptions="End" Margin="0,0,16,16" Spacing="8" IsVisible="False">
+                    <Button x:Name="ZoomOutButton" Text="−" WidthRequest="36" HeightRequest="36" CornerRadius="18" Padding="0" Clicked="OnZoomOutClicked" />
+                    <Button x:Name="ZoomInButton" Text="+" WidthRequest="36" HeightRequest="36" CornerRadius="18" Padding="0" Clicked="OnZoomInClicked" />
+                </HorizontalStackLayout>
+            </Grid>
+
+        </Grid>
+
+        <Grid Grid.Row="2" Padding="10" ColumnDefinitions="*,200">
+            <Label x:Name="StatusLabel" Grid.Column="0" Text="Ready" TextColor="Black" VerticalOptions="Center" />
+            <ProgressBar x:Name="ExportProgressBar" Grid.Column="1" VerticalOptions="Center" />
+        </Grid>
+
+    </Grid>
+
+</ContentPage>
