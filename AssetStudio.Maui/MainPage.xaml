@@ -68,7 +68,10 @@
 
                 <WebView x:Name="MeshPreviewWebView" IsVisible="False" />
 
-                <Button x:Name="ShaderPreviewToggleButton" Text="Show 3D Preview" HorizontalOptions="End" VerticalOptions="Start" Margin="16" IsVisible="False" Clicked="OnShaderPreviewToggleClicked" />
+                <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="Start" Margin="16" Spacing="8">
+                    <Button x:Name="ShaderPreviewToggleButton" Text="Show 3D Preview" IsVisible="False" Clicked="OnShaderPreviewToggleClicked" />
+                    <Button x:Name="WireframeToggleButton" Text="Wireframe" IsVisible="False" Clicked="OnWireframeToggleClicked" />
+                </HorizontalStackLayout>
 
                 <HorizontalStackLayout x:Name="ZoomControls" HorizontalOptions="End" VerticalOptions="End" Margin="0,0,16,16" Spacing="8" IsVisible="False">
                     <Button x:Name="ZoomOutButton" Text="−" WidthRequest="36" HeightRequest="36" CornerRadius="18" Padding="0" Clicked="OnZoomOutClicked" />

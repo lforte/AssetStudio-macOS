@@ -214,7 +214,10 @@ public partial class MainPage : ContentPage
         MeshPreviewWebView.IsVisible = false;
         ZoomControls.IsVisible = false;
         ShaderPreviewToggleButton.IsVisible = false;
+        WireframeToggleButton.IsVisible = false;
+        WireframeToggleButton.Text = "Wireframe";
         showingShaderViewer = false;
+        wireframeEnabled = false;
 
         var asset = selectedAsset;
         if (asset == null)
@@ -251,6 +254,7 @@ public partial class MainPage : ContentPage
             }
 
             MeshPreviewWebView.IsVisible = true;
+            WireframeToggleButton.IsVisible = true;
             try
             {
                 await ShowMeshInViewerAsync(meshJson);
@@ -337,6 +341,9 @@ public partial class MainPage : ContentPage
             PreviewText.IsVisible = false;
             MeshPreviewWebView.IsVisible = true;
             ShaderPreviewToggleButton.Text = "Show Source";
+            wireframeEnabled = false;
+            WireframeToggleButton.Text = "Wireframe";
+            WireframeToggleButton.IsVisible = true;
             await ShowShaderPreviewInViewerAsync(shaderPreviewDescriptor);
         }
         else
@@ -344,7 +351,17 @@ public partial class MainPage : ContentPage
             MeshPreviewWebView.IsVisible = false;
             PreviewText.IsVisible = true;
             ShaderPreviewToggleButton.Text = "Show 3D Preview";
+            WireframeToggleButton.IsVisible = false;
         }
+    }
+
+    private bool wireframeEnabled;
+
+    private async void OnWireframeToggleClicked(object sender, EventArgs e)
+    {
+        wireframeEnabled = !wireframeEnabled;
+        WireframeToggleButton.Text = wireframeEnabled ? "Wireframe: On" : "Wireframe";
+        await MeshPreviewWebView.EvaluateJavaScriptAsync(wireframeEnabled ? "setWireframe(true)" : "setWireframe(false)");
     }
 
     private static (double, double)? ReadPngSize(byte[] png)

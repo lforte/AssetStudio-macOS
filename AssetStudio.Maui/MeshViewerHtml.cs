@@ -109,6 +109,10 @@ internal static class MeshViewerHtml
         frameObject(geometry);
     }
 
+    window.setWireframe = function (enabled) {
+        if (currentMesh) currentMesh.material.wireframe = enabled;
+    };
+
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();

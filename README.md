@@ -129,8 +129,8 @@ Planned/possible improvements for future versions, roughly in priority order:
 - An export-options panel (scale factor, FBX version, eulerFilter, etc.) — currently uses `ExportSettings` defaults with no UI to change them.
 
 **Polish**
-- Remove the on-screen debug overlay in the 3D viewer (`#debug` div in `MeshViewerHtml.cs`) — it's diagnostic leftover from chasing a WebView data-transfer bug, not meant for end users.
-- Wire up a wireframe-toggle button in the UI (the `setWireframe()` JS function already exists, just unused).
+- ~~Remove the on-screen debug overlay in the 3D viewer~~ — done; the diagnostic `#debug` div/`debugLog()`/`window.onerror` leftover from chasing a WebView data-transfer bug has been removed from `MeshViewerHtml.cs`.
+- ~~Add a wireframe-toggle button in the UI~~ — done; a "Wireframe" button appears top-right of the 3D viewer for both `Mesh` previews and the `Shader` 3D placeholder preview.
 - Revisit 3D viewer performance for very large meshes — it currently rebuilds and reloads the whole WebView page per selection.
 
 **Robustness**
