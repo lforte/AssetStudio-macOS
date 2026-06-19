@@ -38,7 +38,7 @@ All credit for the core asset-parsing engine, the TypeTree/SerializedFile format
 
 To build this from source on macOS you'll need:
 
-- **macOS** with **Xcode** and the command line tools installed (`xcode-select --install`).
+- **macOS** with **Xcode 26.4+** and the command line tools installed (`xcode-select --install`). The .NET 10 MacCatalyst SDK's linker step requires the Xcode 26.4 MacCatalyst SDK or newer for Release-configuration builds; Debug builds are more lenient about the exact version. After installing/upgrading Xcode, run `xcodebuild -runFirstLaunch` once to finish setting up its command-line components.
 - **[.NET 10 SDK](https://dotnet.microsoft.com/download)**.
 - The **.NET MAUI workload**:
   ```
@@ -119,7 +119,7 @@ While building this port and testing against real-world AssetBundles, two parsin
 Planned/possible improvements for future versions, roughly in priority order:
 
 **Build & distribution**
-- Upgrade to Xcode 26.4 so Release-configuration builds work (the MAUI linker currently requires it; v1.0.0 ships as a Debug build as a workaround — see [Releases](#releases)).
+- ~~Upgrade to Xcode 26.4 so Release-configuration builds work~~ — done as of Xcode 26.5; Release builds work locally now (run `xcodebuild -runFirstLaunch` after upgrading Xcode if you hit an `actool`/`ibtoold` plugin-load error).
 - Code-sign with a Developer ID and notarize releases, so macOS Gatekeeper doesn't block first launch.
 - Build `AssetStudioFBXNative` on a self-hosted CI runner with the FBX SDK installed, so automated releases include FBX export (currently only local builds do — see [`release.yml`](.github/workflows/release.yml)).
 
