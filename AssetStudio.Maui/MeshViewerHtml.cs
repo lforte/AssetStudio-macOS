@@ -13,14 +13,6 @@ internal static class MeshViewerHtml
     // object/array literal and the whole page is freshly loaded each time a new
     // mesh/shader is selected.
     private const string SceneScript = """
-    function debugLog(msg) {
-        var el = document.getElementById('debug');
-        if (el) el.textContent = msg;
-    }
-    window.onerror = function (msg, src, line, col, err) {
-        debugLog('JS ERROR: ' + msg + ' @' + line + ':' + col);
-    };
-
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x2b2b2b);
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 10000);
@@ -69,7 +61,6 @@ internal static class MeshViewerHtml
     function loadMesh(data) {
         clearCurrentMesh();
         if (!data.vertices || data.vertices.length === 0) {
-            debugLog('no vertices in payload');
             renderer.render(scene, camera);
             return;
         }
@@ -98,7 +89,6 @@ internal static class MeshViewerHtml
         currentMesh = new THREE.Mesh(geometry, material);
         scene.add(currentMesh);
         frameObject(geometry);
-        debugLog('mesh: verts=' + (data.vertices.length / 3) + ' tris=' + (data.indices ? data.indices.length / 3 : 0));
     }
 
     // Generic placeholder preview for Shader assets: we can't run the actual compiled
@@ -117,7 +107,6 @@ internal static class MeshViewerHtml
         currentMesh = new THREE.Mesh(geometry, material);
         scene.add(currentMesh);
         frameObject(geometry);
-        debugLog('shader preview sphere');
     }
 
     window.addEventListener('resize', () => {
@@ -153,12 +142,9 @@ internal static class MeshViewerHtml
     <style>
       html, body { margin:0; padding:0; overflow:hidden; background:#2b2b2b; }
       canvas { display:block; }
-      #debug { position:fixed; top:0; left:0; color:#7fff7f; background:rgba(0,0,0,0.65);
-               font:11px monospace; padding:4px 6px; z-index:9999; white-space:pre-wrap; max-width:100%; }
     </style>
     </head>
     <body>
-    <div id="debug">loading...</div>
     <script>__THREEJS__</script>
     <script>__ORBITJS__</script>
     <script>
