@@ -55,6 +55,11 @@ jobs:
           best_app=""
           best_ver="0"
           for app in /Applications/Xcode*.app; do
+            # Several of these are convenience symlinks to the same real Xcode install
+            # (e.g. Xcode.app, Xcode_26.5.0.app -> Xcode_26.5.app) - resolve to the real,
+            # canonical path so xcode-select/xcrun aren't pointed at a symlink, which has
+            # caused actool/ibtool lookups to fail to resolve their tool paths correctly.
+            [ -L "$app" ] && continue
             [ -d "$app" ] || continue
             ver=$(DEVELOPER_DIR="$app/Contents/Developer" xcrun --sdk macosx --show-sdk-version 2>/dev/null) || continue
             [ -z "$ver" ] && continue
