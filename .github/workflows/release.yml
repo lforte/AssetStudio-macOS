@@ -44,13 +44,18 @@ jobs:
       # SDK version, regardless of what label GitHub gives it.
       - name: Select Xcode with the highest available MacCatalyst SDK
         run: |
+          # MacCatalyst apps build against the macOS SDK (there is no separate "maccatalyst"
+          # SDK name in xcrun) - its version is what .NET's MT4162 errors mean by "MacCatalyst SDK".
+          echo "Installed Xcode apps:"
+          ls -d /Applications/Xcode*.app 2>&1 || echo "(none found)"
+
           best_app=""
           best_ver="0"
           for app in /Applications/Xcode*.app; do
             [ -d "$app" ] || continue
-            ver=$(DEVELOPER_DIR="$app/Contents/Developer" xcrun --sdk maccatalyst --show-sdk-version 2>/dev/null) || continue
+            ver=$(DEVELOPER_DIR="$app/Contents/Developer" xcrun --sdk macosx --show-sdk-version 2>/dev/null) || continue
             [ -z "$ver" ] && continue
-            echo "Found $app -> MacCatalyst SDK $ver"
+            echo "Found $app -> macOS SDK $ver"
             if [ "$(printf '%s\n%s\n' "$ver" "$best_ver" | sort -V | tail -1)" = "$ver" ]; then
               best_ver="$ver"
               best_app="$app"
@@ -58,14 +63,14 @@ jobs:
           done
 
           if [ -z "$best_app" ]; then
-            echo "::error::No Xcode installation with a MacCatalyst SDK was found on this runner."
+            echo "::error::No usable Xcode installation was found on this runner."
             exit 1
           fi
 
-          echo "Selected $best_app (MacCatalyst SDK $best_ver)"
+          echo "Selected $best_app (macOS SDK $best_ver)"
           required="26.4"
           if [ "$(printf '%s\n%s\n' "$best_ver" "$required" | sort -V | head -1)" = "$best_ver" ] && [ "$best_ver" != "$required" ]; then
-            echo "::warning::Highest available MacCatalyst SDK is $best_ver, but the Release build needs $required+. This run will likely fail with MT4162/IL7000 errors - GitHub's macOS runner image hasn't caught up yet."
+            echo "::warning::Highest available macOS SDK is $best_ver, but the Release build needs $required+. This run will likely fail with MT4162/IL7000 errors - GitHub's macOS runner image hasn't caught up yet."
           fi
 
           echo "DEVELOPER_DIR=$best_app/Contents/Developer" >> "$GITHUB_ENV"
