@@ -148,7 +148,7 @@ namespace AssetStudio
             }
         }
 
-        private void LoadAssetsFromMemory(FileReader reader, string originalPath, string unityVersion = null)
+        private void LoadAssetsFromMemory(FileReader reader, string originalPath, string? unityVersion = null)
         {
             if (!assetsFileListHash.Contains(reader.FileName))
             {
@@ -174,7 +174,7 @@ namespace AssetStudio
                 Logger.Info($"Skipping {originalPath} ({reader.FileName})");
         }
 
-        private void LoadBundleFile(FileReader reader, string originalPath = null)
+        private void LoadBundleFile(FileReader reader, string? originalPath = null)
         {
             Logger.Info("Loading " + reader.FullPath);
             try

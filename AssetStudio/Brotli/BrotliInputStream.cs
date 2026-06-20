@@ -211,7 +211,7 @@ namespace Org.Brotli.Dec
 
 		public override bool CanWrite{get{return false;}}
 		public override System.IAsyncResult BeginWrite(byte[] buffer, int offset,
-				int count, System.AsyncCallback callback, object state) {
+				int count, System.AsyncCallback? callback, object? state) {
 			throw new System.NotSupportedException();
 		}
 		public override void Write(byte[] buffer, int offset, int count) {

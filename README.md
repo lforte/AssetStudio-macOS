@@ -139,6 +139,7 @@ Planned/possible improvements for future versions, roughly in priority order:
 
 **Build & distribution**
 - ~~Upgrade to Xcode 26.4 so Release-configuration builds work~~ — done as of Xcode 26.5; Release builds work locally now (run `xcodebuild -runFirstLaunch` after upgrading Xcode if you hit an `actool`/`ibtoold` plugin-load error).
+- ~~Get the CI release workflow building again~~ — done; `macos-latest`'s newest Xcode (26.3, macOS SDK 26.2) was too old for the same 26.4+ requirement above, so [`release.yml`](.github/workflows/release.yml) now runs on the `macos-26` image (Xcode 26.5) and dynamically selects the real (non-symlinked) Xcode install with the highest macOS SDK, instead of trusting `setup-xcode`'s "latest-stable" label.
 - Code-sign with a Developer ID and notarize releases, so macOS Gatekeeper doesn't block first launch.
 - Build `AssetStudioFBXNative` on a self-hosted CI runner with the FBX SDK installed, so automated releases include FBX export (currently only local builds do — see [`release.yml`](.github/workflows/release.yml)).
 

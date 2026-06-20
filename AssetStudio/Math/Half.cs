@@ -815,7 +815,7 @@ namespace AssetStudio
         #endregion
 
         #region IConvertible Members
-        float IConvertible.ToSingle(IFormatProvider provider)
+        float IConvertible.ToSingle(IFormatProvider? provider)
         {
             return (float)this;
         }
@@ -823,63 +823,63 @@ namespace AssetStudio
         {
             return GetTypeCode();
         }
-        bool IConvertible.ToBoolean(IFormatProvider provider)
+        bool IConvertible.ToBoolean(IFormatProvider? provider)
         {
             return Convert.ToBoolean((float)this);
         }
-        byte IConvertible.ToByte(IFormatProvider provider)
+        byte IConvertible.ToByte(IFormatProvider? provider)
         {
             return Convert.ToByte((float)this);
         }
-        char IConvertible.ToChar(IFormatProvider provider)
+        char IConvertible.ToChar(IFormatProvider? provider)
         {
             throw new InvalidCastException(string.Format(CultureInfo.CurrentCulture, "Invalid cast from '{0}' to '{1}'.", "Half", "Char"));
         }
-        DateTime IConvertible.ToDateTime(IFormatProvider provider)
+        DateTime IConvertible.ToDateTime(IFormatProvider? provider)
         {
             throw new InvalidCastException(string.Format(CultureInfo.CurrentCulture, "Invalid cast from '{0}' to '{1}'.", "Half", "DateTime"));
         }
-        decimal IConvertible.ToDecimal(IFormatProvider provider)
+        decimal IConvertible.ToDecimal(IFormatProvider? provider)
         {
             return Convert.ToDecimal((float)this);
         }
-        double IConvertible.ToDouble(IFormatProvider provider)
+        double IConvertible.ToDouble(IFormatProvider? provider)
         {
             return Convert.ToDouble((float)this);
         }
-        short IConvertible.ToInt16(IFormatProvider provider)
+        short IConvertible.ToInt16(IFormatProvider? provider)
         {
             return Convert.ToInt16((float)this);
         }
-        int IConvertible.ToInt32(IFormatProvider provider)
+        int IConvertible.ToInt32(IFormatProvider? provider)
         {
             return Convert.ToInt32((float)this);
         }
-        long IConvertible.ToInt64(IFormatProvider provider)
+        long IConvertible.ToInt64(IFormatProvider? provider)
         {
             return Convert.ToInt64((float)this);
         }
-        sbyte IConvertible.ToSByte(IFormatProvider provider)
+        sbyte IConvertible.ToSByte(IFormatProvider? provider)
         {
             return Convert.ToSByte((float)this);
         }
-        string IConvertible.ToString(IFormatProvider provider)
+        string IConvertible.ToString(IFormatProvider? provider)
         {
             return Convert.ToString((float)this, CultureInfo.InvariantCulture);
         }
-        object IConvertible.ToType(Type conversionType, IFormatProvider provider)
+        object IConvertible.ToType(Type conversionType, IFormatProvider? provider)
         {
             return (((float)this) as IConvertible).ToType(conversionType, provider);
         }
-        ushort IConvertible.ToUInt16(IFormatProvider provider)
+        ushort IConvertible.ToUInt16(IFormatProvider? provider)
         {
             return Convert.ToUInt16((float)this);
         }
-        uint IConvertible.ToUInt32(IFormatProvider provider)
+        uint IConvertible.ToUInt32(IFormatProvider? provider)
         {
             return Convert.ToUInt32((float)this);
         }
-        ulong IConvertible.ToUInt64(IFormatProvider provider)
+        ulong IConvertible.ToUInt64(IFormatProvider? provider)
         {
             return Convert.ToUInt64((float)this);
         }
