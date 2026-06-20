@@ -17,7 +17,7 @@ namespace FMOD
     */
     public class VERSION
     {
-        public const int    number = 0x00010716;
+        public static int   number = 0x00010716;
 #if WIN64
         public const string dll    = "fmod64";
 #else
@@ -1591,6 +1591,14 @@ namespace FMOD
 
         static Factory()
         {
+            // The Windows build bundles the older FMOD 1.07.16 fmod.dll (AssetStudioGUI/Libraries);
+            // the macOS port instead loads the FMOD Engine the user installs separately from
+            // fmod.com, which currently ships as 2.03.14. FMOD_System_Create rejects a header/binary
+            // version mismatch, so match whichever native library this platform actually loads.
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                VERSION.number = 0x00020314;
+            }
             DllLoader.PreloadDll(VERSION.dll);
         }
 
@@ -1601,7 +1609,12 @@ namespace FMOD
             RESULT result   = RESULT.OK;
             IntPtr rawPtr   = new IntPtr();
 
-            result = FMOD_System_Create(out rawPtr);
+            // Keep the original Windows call (matching the bundled fmod.dll) byte-for-byte
+            // unchanged; the macOS FMOD Engine build requires the headerversion argument that
+            // this wrapper never sent, which made FMOD_System_Create reject the call outright.
+            result = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? FMOD_System_Create(out rawPtr)
+                : FMOD_System_Create_WithVersion(out rawPtr, (uint)VERSION.number);
             if (result != RESULT.OK)
             {
                 return result;
@@ -1617,6 +1630,9 @@ namespace FMOD
 
         [DllImport(VERSION.dll)]
         private static extern RESULT FMOD_System_Create                      (out IntPtr system);
+
+        [DllImport(VERSION.dll, EntryPoint = "FMOD_System_Create")]
+        private static extern RESULT FMOD_System_Create_WithVersion          (out IntPtr system, uint headerversion);
 
         #endregion
     }

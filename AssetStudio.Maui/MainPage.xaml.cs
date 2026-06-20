@@ -9,17 +9,31 @@ namespace AssetStudio.Maui;
 public partial class MainPage : ContentPage
 {
     private readonly ObservableCollection<AssetItem> displayedAssets = new();
+    private readonly ObservableCollection<SceneTreeRow> sceneTreeRows = new();
+    private readonly ObservableCollection<TypeTreeItem> assetClassRows = new();
+    private List<AssetNode> sceneTreeRoots = new();
     private AssetItem selectedAsset;
     private double listColumnStartWidth;
 
-    private enum SortColumn { Name, Type }
+    private enum SortColumn { Name, Container, Type, PathID, Size }
     private SortColumn sortColumn = SortColumn.Name;
     private bool sortAscending = true;
+
+    private enum ListTab { SceneHierarchy, AssetList, AssetClasses }
+    private ListTab currentListTab = ListTab.AssetList;
+
+    private enum PreviewTab { Visual, Dump }
+    private PreviewTab currentPreviewTab = PreviewTab.Visual;
+
+    private static readonly Microsoft.Maui.Graphics.Color ActiveTabColor = Microsoft.Maui.Graphics.Color.FromArgb("#BBBBBB");
+    private static readonly Microsoft.Maui.Graphics.Color InactiveTabColor = Microsoft.Maui.Graphics.Colors.Transparent;
 
     public MainPage()
     {
         InitializeComponent();
         AssetListView.ItemsSource = displayedAssets;
+        SceneHierarchyListView.ItemsSource = sceneTreeRows;
+        AssetClassesListView.ItemsSource = assetClassRows;
 
         Studio.StatusUpdate = msg => MainThread.BeginInvokeOnMainThread(() => StatusLabel.Text = msg);
         Studio.ErrorReported = msg => MainThread.BeginInvokeOnMainThread(() => DisplayAlert("Export Error", msg, "OK"));
@@ -125,6 +139,36 @@ public partial class MainPage : ContentPage
         }
     }
 
+    private double containerColumnStartWidth;
+    private double typeColumnStartWidth;
+    private double pathIdColumnStartWidth;
+    private double sizeColumnStartWidth;
+
+    private void OnContainerColumnPanUpdated(object sender, PanUpdatedEventArgs e) =>
+        ResizeColumn(e, ref containerColumnStartWidth, AssetListColumnWidths.Instance.Container, w => AssetListColumnWidths.Instance.Container = w);
+
+    private void OnTypeColumnPanUpdated(object sender, PanUpdatedEventArgs e) =>
+        ResizeColumn(e, ref typeColumnStartWidth, AssetListColumnWidths.Instance.Type, w => AssetListColumnWidths.Instance.Type = w);
+
+    private void OnPathIdColumnPanUpdated(object sender, PanUpdatedEventArgs e) =>
+        ResizeColumn(e, ref pathIdColumnStartWidth, AssetListColumnWidths.Instance.PathID, w => AssetListColumnWidths.Instance.PathID = w);
+
+    private void OnSizeColumnPanUpdated(object sender, PanUpdatedEventArgs e) =>
+        ResizeColumn(e, ref sizeColumnStartWidth, AssetListColumnWidths.Instance.Size, w => AssetListColumnWidths.Instance.Size = w);
+
+    private static void ResizeColumn(PanUpdatedEventArgs e, ref double startWidth, double currentWidth, Action<double> apply)
+    {
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                startWidth = currentWidth;
+                break;
+            case GestureStatus.Running:
+                apply(Math.Clamp(startWidth + e.TotalX, 30, 400));
+                break;
+        }
+    }
+
     private async void OnOpenFilesClicked(object sender, EventArgs e)
     {
         var result = await FilePicker.Default.PickMultipleAsync(new PickOptions { PickerTitle = "Select Unity asset files" });
@@ -137,11 +181,14 @@ public partial class MainPage : ContentPage
         ExportAllButton.IsEnabled = false;
 
         await Task.Run(() => Studio.assetsManager.LoadFiles(files));
-        var (productName, _) = await Task.Run(() => Studio.BuildAssetData());
+        var (productName, treeRoots) = await Task.Run(() => Studio.BuildAssetData());
+        var classMap = await Task.Run(() => Studio.BuildClassStructure());
 
+        sceneTreeRoots = treeRoots;
+        RefreshSceneTree();
+        RefreshAssetClasses(classMap);
         RefreshList();
 
-        ExportSelectedButton.IsEnabled = true;
         ExportAllButton.IsEnabled = true;
         StatusLabel.Text = string.IsNullOrEmpty(productName)
             ? $"Loaded {displayedAssets.Count} assets."
@@ -160,9 +207,15 @@ public partial class MainPage : ContentPage
             ? Studio.visibleAssets
             : Studio.visibleAssets.Where(a => a.Text.Contains(query, StringComparison.OrdinalIgnoreCase));
 
-        assets = sortColumn == SortColumn.Name
-            ? (sortAscending ? assets.OrderBy(a => a.Text, StringComparer.OrdinalIgnoreCase) : assets.OrderByDescending(a => a.Text, StringComparer.OrdinalIgnoreCase))
-            : (sortAscending ? assets.OrderBy(a => a.TypeString, StringComparer.OrdinalIgnoreCase) : assets.OrderByDescending(a => a.TypeString, StringComparer.OrdinalIgnoreCase));
+        assets = sortColumn switch
+        {
+            SortColumn.Name => sortAscending ? assets.OrderBy(a => a.Text, StringComparer.OrdinalIgnoreCase) : assets.OrderByDescending(a => a.Text, StringComparer.OrdinalIgnoreCase),
+            SortColumn.Container => sortAscending ? assets.OrderBy(a => a.Container, StringComparer.OrdinalIgnoreCase) : assets.OrderByDescending(a => a.Container, StringComparer.OrdinalIgnoreCase),
+            SortColumn.Type => sortAscending ? assets.OrderBy(a => a.TypeString, StringComparer.OrdinalIgnoreCase) : assets.OrderByDescending(a => a.TypeString, StringComparer.OrdinalIgnoreCase),
+            SortColumn.PathID => sortAscending ? assets.OrderBy(a => a.m_PathID) : assets.OrderByDescending(a => a.m_PathID),
+            SortColumn.Size => sortAscending ? assets.OrderBy(a => a.FullSize) : assets.OrderByDescending(a => a.FullSize),
+            _ => assets,
+        };
 
         displayedAssets.Clear();
         foreach (var asset in assets)
@@ -170,89 +223,283 @@ public partial class MainPage : ContentPage
             displayedAssets.Add(asset);
         }
 
-        NameHeaderLabel.Text = "Name" + (sortColumn == SortColumn.Name ? (sortAscending ? " ▲" : " ▼") : "");
-        TypeHeaderLabel.Text = "Type" + (sortColumn == SortColumn.Type ? (sortAscending ? " ▲" : " ▼") : "");
+        NameHeaderLabel.Text = "Name" + SortArrow(SortColumn.Name);
+        ContainerHeaderLabel.Text = "Container" + SortArrow(SortColumn.Container);
+        TypeHeaderLabel.Text = "Type" + SortArrow(SortColumn.Type);
+        PathIdHeaderLabel.Text = "PathID" + SortArrow(SortColumn.PathID);
+        SizeHeaderLabel.Text = "Size" + SortArrow(SortColumn.Size);
     }
 
-    private void OnNameHeaderTapped(object sender, TappedEventArgs e)
+    private string SortArrow(SortColumn column) => sortColumn == column ? (sortAscending ? " ▲" : " ▼") : "";
+
+    private void SetSortColumn(SortColumn column)
     {
-        if (sortColumn == SortColumn.Name)
+        if (sortColumn == column)
             sortAscending = !sortAscending;
         else
         {
-            sortColumn = SortColumn.Name;
+            sortColumn = column;
             sortAscending = true;
         }
         RefreshList();
     }
 
-    private void OnTypeHeaderTapped(object sender, TappedEventArgs e)
+    private void OnNameHeaderTapped(object sender, TappedEventArgs e) => SetSortColumn(SortColumn.Name);
+    private void OnContainerHeaderTapped(object sender, TappedEventArgs e) => SetSortColumn(SortColumn.Container);
+    private void OnTypeHeaderTapped(object sender, TappedEventArgs e) => SetSortColumn(SortColumn.Type);
+    private void OnPathIdHeaderTapped(object sender, TappedEventArgs e) => SetSortColumn(SortColumn.PathID);
+    private void OnSizeHeaderTapped(object sender, TappedEventArgs e) => SetSortColumn(SortColumn.Size);
+
+    private void RefreshSceneTree()
     {
-        if (sortColumn == SortColumn.Type)
-            sortAscending = !sortAscending;
+        sceneTreeRows.Clear();
+        foreach (var root in sceneTreeRoots)
+        {
+            var rootRow = new SceneTreeRow(root, 0);
+            sceneTreeRows.Add(rootRow);
+            if (rootRow.HasChildren)
+            {
+                rootRow.IsExpanded = true;
+                foreach (var child in root.Nodes)
+                {
+                    sceneTreeRows.Add(new SceneTreeRow(child, 1));
+                }
+            }
+        }
+    }
+
+    private void ToggleTreeRow(SceneTreeRow row)
+    {
+        if (!row.HasChildren)
+            return;
+
+        var index = sceneTreeRows.IndexOf(row);
+        if (index < 0)
+            return;
+
+        if (row.IsExpanded)
+        {
+            var removeCount = 0;
+            while (index + 1 + removeCount < sceneTreeRows.Count && sceneTreeRows[index + 1 + removeCount].Depth > row.Depth)
+                removeCount++;
+            for (var k = 0; k < removeCount; k++)
+                sceneTreeRows.RemoveAt(index + 1);
+            row.IsExpanded = false;
+        }
         else
         {
-            sortColumn = SortColumn.Type;
-            sortAscending = true;
+            row.IsExpanded = true;
+            var insertAt = index + 1;
+            foreach (var child in row.Node.Nodes)
+            {
+                sceneTreeRows.Insert(insertAt, new SceneTreeRow(child, row.Depth + 1));
+                insertAt++;
+            }
         }
-        RefreshList();
     }
+
+    private void OnSceneTreeRowSelected(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.CurrentSelection.FirstOrDefault() is not SceneTreeRow row)
+            return;
+
+        // Defer everything to the next run loop tick: acting synchronously inside a
+        // SelectionChanged callback that originated in one of the CollectionView's own cells
+        // (whether that's mutating the bound ObservableCollection or touching other UI) has
+        // been observed to crash the underlying UICollectionView on Mac Catalyst (SIGABRT).
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                // Clear the selection so tapping the same row again later still raises
+                // SelectionChanged (CollectionView doesn't re-raise it for a no-op selection).
+                SceneHierarchyListView.SelectedItem = null;
+
+                ToggleTreeRow(row);
+
+                if (row.Node.GameObject != null)
+                {
+                    selectedAsset = null;
+                    ExportSelectedButton.IsEnabled = false;
+                    await UpdatePreviewAsync(row.Node.GameObject, null);
+                }
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Scene Hierarchy Error", FormatException(ex), "OK");
+            }
+        });
+    }
+
+    private void RefreshAssetClasses(Dictionary<string, SortedDictionary<int, TypeTreeItem>> classMap)
+    {
+        assetClassRows.Clear();
+        foreach (var versionGroup in classMap.Values)
+        {
+            foreach (var item in versionGroup.Values)
+            {
+                assetClassRows.Add(item);
+            }
+        }
+    }
+
+    private void OnAssetClassSelected(object sender, SelectionChangedEventArgs e)
+    {
+        var item = e.CurrentSelection.FirstOrDefault() as TypeTreeItem;
+        if (item == null)
+            return;
+
+        selectedAsset = null;
+        ExportSelectedButton.IsEnabled = false;
+
+        PreviewImage.IsVisible = false;
+        MeshPreviewWebView.IsVisible = false;
+        FallbackPreviewImage.IsVisible = false;
+        ZoomControls.IsVisible = false;
+        WireframeToggleButton.IsVisible = false;
+        DumpText.Text = item.ToString();
+        SetPreviewTab(PreviewTab.Dump);
+    }
+
+    private void SetListTab(ListTab tab)
+    {
+        currentListTab = tab;
+
+        AssetListHeaderRow.IsVisible = tab == ListTab.AssetList;
+        AssetClassesHeaderRow.IsVisible = tab == ListTab.AssetClasses;
+
+        AssetListView.IsVisible = tab == ListTab.AssetList;
+        SceneHierarchyListView.IsVisible = tab == ListTab.SceneHierarchy;
+        AssetClassesListView.IsVisible = tab == ListTab.AssetClasses;
+
+        SceneHierarchyTabButton.BackgroundColor = tab == ListTab.SceneHierarchy ? ActiveTabColor : InactiveTabColor;
+        AssetListTabButton.BackgroundColor = tab == ListTab.AssetList ? ActiveTabColor : InactiveTabColor;
+        AssetClassesTabButton.BackgroundColor = tab == ListTab.AssetClasses ? ActiveTabColor : InactiveTabColor;
+    }
+
+    private void OnSceneHierarchyTabClicked(object sender, EventArgs e) => SetListTab(ListTab.SceneHierarchy);
+    private void OnAssetListTabClicked(object sender, EventArgs e) => SetListTab(ListTab.AssetList);
+    private void OnAssetClassesTabClicked(object sender, EventArgs e) => SetListTab(ListTab.AssetClasses);
+
+    private void SetPreviewTab(PreviewTab tab)
+    {
+        currentPreviewTab = tab;
+        VisualPreviewPanel.IsVisible = tab == PreviewTab.Visual;
+        DumpText.IsVisible = tab == PreviewTab.Dump;
+        VisualPreviewTabButton.BackgroundColor = tab == PreviewTab.Visual ? ActiveTabColor : InactiveTabColor;
+        DumpTabButton.BackgroundColor = tab == PreviewTab.Dump ? ActiveTabColor : InactiveTabColor;
+    }
+
+    private void OnVisualPreviewTabClicked(object sender, EventArgs e) => SetPreviewTab(PreviewTab.Visual);
+    private void OnDumpTabClicked(object sender, EventArgs e) => SetPreviewTab(PreviewTab.Dump);
 
     private const int MaxPreviewTextLength = 200_000;
     private int previewGeneration;
 
     private async void OnAssetSelected(object sender, SelectionChangedEventArgs e)
     {
-        selectedAsset = e.CurrentSelection.FirstOrDefault() as AssetItem;
-        await UpdatePreviewAsync();
+        var item = e.CurrentSelection.FirstOrDefault() as AssetItem;
+        selectedAsset = item;
+        ExportSelectedButton.IsEnabled = item != null;
+        await UpdatePreviewAsync(item?.Asset, item);
     }
 
-    private async Task UpdatePreviewAsync()
+    private async Task UpdatePreviewAsync(Object asset, AssetItem item)
     {
         PreviewImage.IsVisible = false;
-        PreviewText.IsVisible = false;
         MeshPreviewWebView.IsVisible = false;
+        FallbackPreviewImage.IsVisible = false;
         ZoomControls.IsVisible = false;
-        ShaderPreviewToggleButton.IsVisible = false;
         WireframeToggleButton.IsVisible = false;
         WireframeToggleButton.Text = "Wireframe";
-        showingShaderViewer = false;
         wireframeEnabled = false;
+        AudioPlayerPanel.IsVisible = false;
+        AudioPlayer.Stop();
+        currentAudioWav = null;
+        DumpText.Text = string.Empty;
 
-        var asset = selectedAsset;
         if (asset == null)
             return;
 
         var generation = ++previewGeneration;
         StatusLabel.Text = "Loading preview...";
 
-        if (asset.Asset is Mesh mesh)
+        string dump = null;
+        string dumpError = null;
+        byte[] png = null;
+        string meshJson = null;
+        byte[] wav = null;
+        string visualError = null;
+
+        await Task.Run(() =>
         {
-            string meshJson = null;
-            string meshError = null;
-            await Task.Run(() =>
+            try
             {
-                try
+                dump = Studio.DumpAsset(asset);
+            }
+            catch (Exception ex)
+            {
+                dumpError = FormatException(ex);
+            }
+
+            try
+            {
+                if (item != null)
+                {
+                    png = PreviewHelper.GetPreviewPng(item);
+                }
+                if (asset is Mesh mesh)
                 {
                     meshJson = MeshViewerHelper.BuildGeometryJson(mesh);
                 }
-                catch (Exception ex)
-                {
-                    meshError = FormatException(ex);
-                }
-            });
-
-            if (generation != previewGeneration)
-                return;
-
-            StatusLabel.Text = "Ready";
-
-            if (meshError != null)
+            }
+            catch (Exception ex)
             {
-                await DisplayAlert("Preview Error", meshError, "OK");
-                return;
+                visualError = FormatException(ex);
             }
 
+            // FMOD can't decode every legacy/unsupported audio format - that's not an error
+            // worth interrupting the user with, it just means no playback preview is available.
+            try
+            {
+                if (asset is AudioClip)
+                {
+                    wav = AudioPreviewHelper.GetWav(asset);
+                }
+            }
+            catch
+            {
+                wav = null;
+            }
+        });
+
+        if (generation != previewGeneration)
+            return; // a newer selection was made while this one was loading; discard this result
+
+        StatusLabel.Text = "Ready";
+
+        if (dump != null)
+        {
+            if (dump.Length > MaxPreviewTextLength)
+            {
+                dump = dump.Substring(0, MaxPreviewTextLength) + "\n... [truncated for preview - export this asset to see the full content]";
+            }
+            DumpText.Text = dump;
+        }
+        else if (dumpError != null)
+        {
+            DumpText.Text = dumpError;
+        }
+
+        if (visualError != null)
+        {
+            await DisplayAlert("Preview Error", visualError, "OK");
+            FallbackPreviewImage.IsVisible = true;
+            return;
+        }
+
+        if (asset is Mesh && meshJson != null)
+        {
             MeshPreviewWebView.IsVisible = true;
             WireframeToggleButton.IsVisible = true;
             try
@@ -263,45 +510,22 @@ public partial class MainPage : ContentPage
             {
                 await DisplayAlert("3D Preview Error", FormatException(ex), "OK");
             }
-            return;
         }
-
-        byte[] png = null;
-        string dump = null;
-        string error = null;
-
-        await Task.Run(() =>
+        else if (asset is Shader shaderAsset)
         {
+            MeshPreviewWebView.IsVisible = true;
+            WireframeToggleButton.IsVisible = true;
+            var descriptor = ShaderPreviewHelper.Build(shaderAsset);
             try
             {
-                png = PreviewHelper.GetPreviewPng(asset);
-                if (png == null)
-                {
-                    dump = Studio.DumpAsset(asset.Asset);
-                    if (dump != null && dump.Length > MaxPreviewTextLength)
-                    {
-                        dump = dump.Substring(0, MaxPreviewTextLength) + "\n... [truncated for preview - export this asset to see the full content]";
-                    }
-                }
+                await ShowShaderPreviewInViewerAsync(descriptor);
             }
             catch (Exception ex)
             {
-                error = FormatException(ex);
+                await DisplayAlert("3D Preview Error", FormatException(ex), "OK");
             }
-        });
-
-        if (generation != previewGeneration)
-            return; // a newer selection was made while this one was loading; discard this result
-
-        StatusLabel.Text = "Ready";
-
-        if (error != null)
-        {
-            await DisplayAlert("Preview Error", error, "OK");
-            return;
         }
-
-        if (png != null)
+        else if (png != null)
         {
             PreviewImage.Source = ImageSource.FromStream(() => new MemoryStream(png));
             var size = ReadPngSize(png);
@@ -311,49 +535,37 @@ public partial class MainPage : ContentPage
             ResetZoom();
             ZoomControls.IsVisible = true;
         }
-        else if (dump != null)
+        else if (wav != null)
         {
-            PreviewText.Text = dump;
-            PreviewText.IsVisible = true;
-            ZoomControls.IsVisible = false;
-
-            if (asset.Asset is Shader shaderAsset)
-            {
-                shaderPreviewDescriptor = ShaderPreviewHelper.Build(shaderAsset);
-                ShaderPreviewToggleButton.Text = "Show 3D Preview";
-                ShaderPreviewToggleButton.IsVisible = true;
-            }
+            currentAudioWav = wav;
+            AudioClipNameLabel.Text = item?.Text ?? "Audio Clip";
+            AudioPlayerPanel.IsVisible = true;
         }
         else
         {
-            ZoomControls.IsVisible = false;
+            // No visual representation (AudioClip with an unsupported codec, MonoBehaviour,
+            // Animator, GameObject, ...): fall back to the original app's generic placeholder.
+            FallbackPreviewImage.IsVisible = true;
         }
     }
 
-    private bool showingShaderViewer;
-    private ShaderPreviewHelper.Descriptor shaderPreviewDescriptor;
+    private byte[] currentAudioWav;
 
-    private async void OnShaderPreviewToggleClicked(object sender, EventArgs e)
+    private async void OnAudioPlayClicked(object sender, EventArgs e)
     {
-        showingShaderViewer = !showingShaderViewer;
-        if (showingShaderViewer)
+        if (currentAudioWav == null)
+            return;
+        try
         {
-            PreviewText.IsVisible = false;
-            MeshPreviewWebView.IsVisible = true;
-            ShaderPreviewToggleButton.Text = "Show Source";
-            wireframeEnabled = false;
-            WireframeToggleButton.Text = "Wireframe";
-            WireframeToggleButton.IsVisible = true;
-            await ShowShaderPreviewInViewerAsync(shaderPreviewDescriptor);
+            AudioPlayer.Play(currentAudioWav);
         }
-        else
+        catch (Exception ex)
         {
-            MeshPreviewWebView.IsVisible = false;
-            PreviewText.IsVisible = true;
-            ShaderPreviewToggleButton.Text = "Show 3D Preview";
-            WireframeToggleButton.IsVisible = false;
+            await DisplayAlert("Audio Playback Error", FormatException(ex), "OK");
         }
     }
+
+    private void OnAudioStopClicked(object sender, EventArgs e) => AudioPlayer.Stop();
 
     private bool wireframeEnabled;
 

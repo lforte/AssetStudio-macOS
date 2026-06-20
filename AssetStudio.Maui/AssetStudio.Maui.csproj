@@ -49,7 +49,7 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="#1E2128" />
 
 		<!-- Splash Screen -->
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
@@ -83,6 +83,9 @@
 		<ItemGroup>
 			<NativeDylib Include="$(MSBuildProjectDirectory)\..\Texture2DDecoderNative\build\libTexture2DDecoderNative.dylib" Condition="Exists('$(MSBuildProjectDirectory)\..\Texture2DDecoderNative\build\libTexture2DDecoderNative.dylib')" />
 			<NativeDylib Include="$(MSBuildProjectDirectory)\..\AssetStudioFBXNative\build\libAssetStudioFBXNative.dylib" Condition="Exists('$(MSBuildProjectDirectory)\..\AssetStudioFBXNative\build\libAssetStudioFBXNative.dylib')" />
+			<!-- FMOD Engine (for AudioClip preview/export) is a separate proprietary download from
+			     fmod.com, same situation as the FBX SDK - not redistributed in this repo. -->
+			<NativeDylib Include="/Applications/FMOD Engine/api/core/lib/libfmod.dylib" Condition="Exists('/Applications/FMOD Engine/api/core/lib/libfmod.dylib')" />
 		</ItemGroup>
 		<Copy SourceFiles="@(NativeDylib)" DestinationFolder="$(TargetDir)$(AssemblyName).app\Contents\MonoBundle\x64\" ContinueOnError="true" Condition="'@(NativeDylib)' != ''" />
 		<!-- Ad-hoc sign the copied dylibs ourselves: the SDK's own native-library signing pass only

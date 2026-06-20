@@ -6,8 +6,8 @@ namespace AssetStudioCore
     public class TypeTreeItem
     {
         private readonly TypeTree m_Type;
-        public readonly int TypeID;
-        public readonly string Text;
+        public int TypeID { get; }
+        public string Text { get; }
 
         public TypeTreeItem(int typeID, TypeTree m_Type)
         {

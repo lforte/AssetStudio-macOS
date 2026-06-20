@@ -5,10 +5,10 @@ namespace AssetStudioCore
 {
     public class AssetNode
     {
-        public string Text;
-        public GameObject GameObject;
-        public bool Checked;
-        public List<AssetNode> Nodes = new List<AssetNode>();
+        public string Text { get; set; }
+        public GameObject GameObject { get; set; }
+        public bool Checked { get; set; }
+        public List<AssetNode> Nodes { get; set; } = new List<AssetNode>();
 
         public AssetNode(string text)
         {
