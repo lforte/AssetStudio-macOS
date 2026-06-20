@@ -34,10 +34,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select latest available Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      # The MacCatalyst linker step (ILLink/ManagedRegistrar) needs the MacCatalyst 26.4+ SDK -
+      # building with an older one fails with MT4162/IL7000 errors about APIs "introduced in
+      # MacCatalyst 26.4". `setup-xcode@v1`'s `xcode-version: latest-stable` picks whichever
+      # Xcode that action considers the runner image's default "stable" version, which has
+      # repeatedly lagged behind the newest Xcode actually installed on the same image (the
+      # v1.1.0/v1.2.0 release builds both failed this way against a 26.2 SDK). Instead, inspect
+      # every Xcode actually present on the runner and pick whichever has the highest MacCatalyst
+      # SDK version, regardless of what label GitHub gives it.
+      - name: Select Xcode with the highest available MacCatalyst SDK
+        run: |
+          best_app=""
+          best_ver="0"
+          for app in /Applications/Xcode*.app; do
+            [ -d "$app" ] || continue
+            ver=$(DEVELOPER_DIR="$app/Contents/Developer" xcrun --sdk maccatalyst --show-sdk-version 2>/dev/null) || continue
+            [ -z "$ver" ] && continue
+            echo "Found $app -> MacCatalyst SDK $ver"
+            if [ "$(printf '%s\n%s\n' "$ver" "$best_ver" | sort -V | tail -1)" = "$ver" ]; then
+              best_ver="$ver"
+              best_app="$app"
+            fi
+          done
+
+          if [ -z "$best_app" ]; then
+            echo "::error::No Xcode installation with a MacCatalyst SDK was found on this runner."
+            exit 1
+          fi
+
+          echo "Selected $best_app (MacCatalyst SDK $best_ver)"
+          required="26.4"
+          if [ "$(printf '%s\n%s\n' "$best_ver" "$required" | sort -V | head -1)" = "$best_ver" ] && [ "$best_ver" != "$required" ]; then
+            echo "::warning::Highest available MacCatalyst SDK is $best_ver, but the Release build needs $required+. This run will likely fail with MT4162/IL7000 errors - GitHub's macOS runner image hasn't caught up yet."
+          fi
+
+          echo "DEVELOPER_DIR=$best_app/Contents/Developer" >> "$GITHUB_ENV"
+          sudo xcode-select -s "$best_app/Contents/Developer"
+          xcodebuild -version
+          # First-time setup for whichever Xcode we just switched to (harmless if already done) -
+          # locally, skipping this after switching Xcode versions caused actool/ibtoold failures.
+          sudo xcodebuild -runFirstLaunch
 
       - name: Install CMake
         run: brew install cmake
@@ -84,9 +120,10 @@ jobs:
           name: ${{ github.ref_name }}
           generate_release_notes: true
           body: |
-            **Note:** this CI build does not include FBX export - the Autodesk FBX SDK is
-            proprietary and can't be fetched automatically in CI. Build locally with the
-            SDK installed (see the README's "Building" section) if you need FBX export.
+            **Note:** this CI build does not include FBX export or AudioClip playback preview -
+            the Autodesk FBX SDK and the FMOD Engine are both proprietary and can't be fetched
+            automatically in CI. Build locally with them installed (see the README's
+            "Building"/"Requirements" sections) if you need either feature.
 
             The app is not code-signed with a Developer ID or notarized, so macOS
             Gatekeeper will block it on first launch: right-click the app -> **Open**,
