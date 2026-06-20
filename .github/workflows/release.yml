@@ -39,54 +39,13 @@ jobs:
 
       # The MacCatalyst linker step (ILLink/ManagedRegistrar) needs the MacCatalyst 26.4+ SDK -
       # building with an older one fails with MT4162/IL7000 errors about APIs "introduced in
-      # MacCatalyst 26.4". `setup-xcode@v1`'s `xcode-version: latest-stable` picks whichever
-      # Xcode that action considers the runner image's default "stable" version, which has
-      # repeatedly lagged behind the newest Xcode actually installed on the same image (the
-      # v1.1.0/v1.2.0 release builds both failed this way against a 26.2 SDK). Instead, inspect
-      # every Xcode actually present on the runner and pick whichever has the highest MacCatalyst
-      # SDK version, regardless of what label GitHub gives it.
-      - name: Select Xcode with the highest available MacCatalyst SDK
+      # MacCatalyst 26.4". The macos-26 image's default Xcode is already 26.5 (verified via
+      # actions/runner-images' macos-26-Readme.md and an actual CI run), so just select it
+      # directly by its real (non-symlinked) path - no need to scan every installed Xcode.
+      - name: Select Xcode 26.5
         run: |
-          # MacCatalyst apps build against the macOS SDK (there is no separate "maccatalyst"
-          # SDK name in xcrun) - its version is what .NET's MT4162 errors mean by "MacCatalyst SDK".
-          echo "Installed Xcode apps:"
-          ls -d /Applications/Xcode*.app 2>&1 || echo "(none found)"
-
-          best_app=""
-          best_ver="0"
-          for app in /Applications/Xcode*.app; do
-            # Several of these are convenience symlinks to the same real Xcode install
-            # (e.g. Xcode.app, Xcode_26.5.0.app -> Xcode_26.5.app) - resolve to the real,
-            # canonical path so xcode-select/xcrun aren't pointed at a symlink, which has
-            # caused actool/ibtool lookups to fail to resolve their tool paths correctly.
-            [ -L "$app" ] && continue
-            [ -d "$app" ] || continue
-            ver=$(DEVELOPER_DIR="$app/Contents/Developer" xcrun --sdk macosx --show-sdk-version 2>/dev/null) || continue
-            [ -z "$ver" ] && continue
-            echo "Found $app -> macOS SDK $ver"
-            if [ "$(printf '%s\n%s\n' "$ver" "$best_ver" | sort -V | tail -1)" = "$ver" ]; then
-              best_ver="$ver"
-              best_app="$app"
-            fi
-          done
-
-          if [ -z "$best_app" ]; then
-            echo "::error::No usable Xcode installation was found on this runner."
-            exit 1
-          fi
-
-          echo "Selected $best_app (macOS SDK $best_ver)"
-          required="26.4"
-          if [ "$(printf '%s\n%s\n' "$best_ver" "$required" | sort -V | head -1)" = "$best_ver" ] && [ "$best_ver" != "$required" ]; then
-            echo "::warning::Highest available macOS SDK is $best_ver, but the Release build needs $required+. This run will likely fail with MT4162/IL7000 errors - GitHub's macOS runner image hasn't caught up yet."
-          fi
-
-          echo "DEVELOPER_DIR=$best_app/Contents/Developer" >> "$GITHUB_ENV"
-          sudo xcode-select -s "$best_app/Contents/Developer"
+          sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
           xcodebuild -version
-          # First-time setup for whichever Xcode we just switched to (harmless if already done) -
-          # locally, skipping this after switching Xcode versions caused actool/ibtoold failures.
-          sudo xcodebuild -runFirstLaunch
 
       - name: Install CMake
         run: brew install cmake
