@@ -28,7 +28,10 @@ permissions:
 
 jobs:
   build-and-release:
-    runs-on: macos-latest
+    # macos-latest currently maxes out at Xcode 26.3 (macOS SDK 26.2), which is too old for
+    # this build (see the comment on the Xcode-selection step below). macos-26 is GitHub's
+    # newer runner image and ships Xcode 26.5 with the macOS 26.4/26.5 SDKs we actually need.
+    runs-on: macos-26
 
     steps:
       - name: Checkout
