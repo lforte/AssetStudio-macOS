@@ -96,7 +96,7 @@ git tag -a v1.0.1 -m "v1.0.1"
 git push origin v1.0.1
 ```
 
-It can also be run on demand from the Actions tab (`workflow_dispatch`) without creating a release, to sanity-check that the build still works. Note that CI-built releases don't include FBX export, since the proprietary FBX SDK isn't available on GitHub-hosted runners — see the comments at the top of that workflow file for details.
+It can also be run on demand from the Actions tab (`workflow_dispatch`) without creating a release, to sanity-check that the build still works. Note that CI-built releases don't include FBX export or `AudioClip` playback preview, since the proprietary FBX SDK and FMOD Engine aren't available on GitHub-hosted runners — see the comments at the top of that workflow file for details. The workflow runs on the `macos-26` runner image (Xcode 26.5), which the .NET 10 MacCatalyst Release build needs — see [Requirements](#requirements).
 
 ## Usage
 
@@ -139,7 +139,7 @@ Planned/possible improvements for future versions, roughly in priority order:
 
 **Build & distribution**
 - ~~Upgrade to Xcode 26.4 so Release-configuration builds work~~ — done as of Xcode 26.5; Release builds work locally now (run `xcodebuild -runFirstLaunch` after upgrading Xcode if you hit an `actool`/`ibtoold` plugin-load error).
-- ~~Get the CI release workflow building again~~ — done; `macos-latest`'s newest Xcode (26.3, macOS SDK 26.2) was too old for the same 26.4+ requirement above, so [`release.yml`](.github/workflows/release.yml) now runs on the `macos-26` image (Xcode 26.5) and dynamically selects the real (non-symlinked) Xcode install with the highest macOS SDK, instead of trusting `setup-xcode`'s "latest-stable" label.
+- ~~Get the CI release workflow building again~~ — done; `macos-latest`'s newest Xcode (26.3, macOS SDK 26.2) was too old for the same 26.4+ requirement above, so [`release.yml`](.github/workflows/release.yml) now runs on the `macos-26` image and selects its Xcode 26.5 directly. Verified end-to-end with the [v1.3.0 release](https://github.com/lforte/AssetStudio-macOS/releases/tag/v1.3.0).
 - Code-sign with a Developer ID and notarize releases, so macOS Gatekeeper doesn't block first launch.
 - Build `AssetStudioFBXNative` on a self-hosted CI runner with the FBX SDK installed, so automated releases include FBX export (currently only local builds do — see [`release.yml`](.github/workflows/release.yml)).
 
