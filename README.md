@@ -89,6 +89,8 @@ To build this from source on macOS you'll need:
 
 ## Releases
 
+See [CHANGELOG.md](CHANGELOG.md) for the full release history since v1.0.0.
+
 [`.github/workflows/release.yml`](.github/workflows/release.yml) builds the app and publishes it as a GitHub Release automatically whenever a `v*` tag is pushed:
 
 ```
@@ -97,6 +99,8 @@ git push origin v1.0.1
 ```
 
 It can also be run on demand from the Actions tab (`workflow_dispatch`) without creating a release, to sanity-check that the build still works. Note that CI-built releases don't include FBX export or `AudioClip` playback preview, since the proprietary FBX SDK and FMOD Engine aren't available on GitHub-hosted runners — see the comments at the top of that workflow file for details. The workflow runs on the `macos-26` runner image (Xcode 26.5), which the .NET 10 MacCatalyst Release build needs — see [Requirements](#requirements).
+
+Starting with v1.3.0, each GitHub Release has **two downloads**: the CI build above (`AssetStudio.Maui-<version>-macOS.zip`) and a locally-built **Universal** build (`AssetStudio.Maui-<version>-macOS-Universal.zip`) with the FBX SDK and FMOD Engine installed, so it includes FBX export and `AudioClip` playback preview on top of everything else. Pick whichever matches what you need — see each release's notes for details.
 
 ## Usage
 
@@ -145,7 +149,7 @@ Planned/possible improvements for future versions, roughly in priority order:
 
 **Feature parity with the original Windows GUI**
 - ~~A Scene Hierarchy / GameObject tree view~~ — done; see the Scene Hierarchy tab, plus the new Asset Classes tab and Container/PathID/Size columns on the Asset List tab.
-- ~~`AudioClip` playback preview~~ — done via the FMOD Engine + `AVAudioPlayer`, pending a real-world test against a file that actually contains `AudioClip` assets (the bundle used during development had none).
+- ~~`AudioClip` playback preview~~ — done via the FMOD Engine + `AVAudioPlayer`; verified end-to-end (Play/Stop and export) against real `AudioClip`-bearing AssetBundles as of v1.4.0.
 - A search box for the Scene Hierarchy tab (the original GUI's `treeSearch`) — the Mac app's tree has no search yet, only the Asset List tab does.
 - An assembly-directory picker for MonoBehaviour export, including the Il2CppDumper dummy-DLL workflow.
 - An export-options panel (scale factor, FBX version, eulerFilter, etc.) — currently uses `ExportSettings` defaults with no UI to change them.
