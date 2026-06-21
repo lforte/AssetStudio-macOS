@@ -153,6 +153,7 @@ Planned/possible improvements for future versions, roughly in priority order:
 - A search box for the Scene Hierarchy tab (the original GUI's `treeSearch`) — the Mac app's tree has no search yet, only the Asset List tab does.
 - An assembly-directory picker for MonoBehaviour export, including the Il2CppDumper dummy-DLL workflow.
 - An export-options panel (scale factor, FBX version, eulerFilter, etc.) — currently uses `ExportSettings` defaults with no UI to change them.
+- Multi-select in the Asset List (Shift-click to select a range) so **Export Selected** can export more than one asset at a time, matching the original `ListView`'s multi-selection behavior.
 
 **Polish**
 - ~~Remove the on-screen debug overlay in the 3D viewer~~ — done; the diagnostic `#debug` div/`debugLog()`/`window.onerror` leftover from chasing a WebView data-transfer bug has been removed from `MeshViewerHtml.cs`.
@@ -160,6 +161,8 @@ Planned/possible improvements for future versions, roughly in priority order:
 - Revisit 3D viewer performance for very large meshes — it currently rebuilds and reloads the whole WebView page per selection.
 - The Asset List's Name column isn't resizable (only Container/Type/PathID/Size are) — it currently absorbs all remaining width by design, but a drag handle would match the original GUI more closely.
 - Replace the deprecated `AVAudioPlayer(NSData, string, out NSError)` constructor used for audio playback with the recommended non-deprecated equivalent.
+- Clear the Asset List, Scene Hierarchy, and Asset Classes tabs when opening a new file/folder — they currently keep showing the previously loaded file's entries until the new data replaces them.
+- Only re-filter the Asset List when the user presses Enter in the search box, instead of on every keystroke — on files with a lot of assets, filtering on each keypress makes typing feel slow.
 
 **Robustness**
 - Audit other asset classes for the same kind of version-specific missing-field bugs found in `Texture2D` and `Shader` (see [Notable fixes](#notable-fixes-upstreamed-from-this-port)), especially for Unity versions newer than 2022.1 (the original project's documented support ceiling).
